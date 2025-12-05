@@ -1,7 +1,7 @@
 # 🃏 Yu-Gi-Code! Card Creator
 
 
-# 🚀 **[Play with yu-gi-code-v2 Live Here](https://fatiguita.github.io/yu-gi-code-v2/)**
+### 🚀 **[Play with yu-gi-code-v2 Live Here](https://fatiguita.github.io/yu-gi-code-v2/)**
 
 **Turn your code into a duel!**
 
