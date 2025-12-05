@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yu-Gi-Code! Card Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        /* Injected by React App */
+      }
+      body {
+        background-color: var(--color-background);
+        background-image: 
+          radial-gradient(circle at 25% 25%, var(--color-background-accent) 2%, transparent 100%),
+          radial-gradient(circle at 75% 75%, var(--color-primary) 2%, transparent 100%);
+        color: var(--color-text-main);
+        transition: background-color 0.5s ease;
+      }
+
+      /* Text Colors */
+      .text-main { color: var(--color-text-main); }
+      .text-muted { color: var(--color-text-muted); }
+      .text-accent { color: var(--color-accent); }
+      .text-primary { color: var(--color-primary); }
+      .text-danger { color: var(--color-danger); }
+      .text-success { color: var(--color-success); }
+      
+      /* Background Colors */
+      .bg-primary { background-color: var(--color-primary); }
+      .bg-secondary { background-color: var(--color-secondary); }
+      .bg-accent { background-color: var(--color-accent); }
+      .bg-surface-1 { background-color: var(--color-surface-1); }
+      .bg-surface-2 { background-color: var(--color-surface-2); }
+      .bg-danger { background-color: var(--color-danger-surface); }
+      .bg-success { background-color: var(--color-success-surface); }
+
+      /* Border Colors */
+      .border-primary { border-color: var(--color-primary); }
+      .border-secondary { border-color: var(--color-secondary); }
+      .border-accent { border-color: var(--color-accent); }
+      .border-muted { border-color: var(--color-border); }
+
+      /* Buttons */
+      .btn {
+        font-weight: bold;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        color: var(--color-text-main);
+      }
+      .btn:disabled {
+        background-color: var(--color-text-muted);
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      .btn-primary {
+        background-color: var(--color-primary);
+      }
+      .btn-primary:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: scale(1.05);
+      }
+      .btn-secondary {
+        background-color: var(--color-secondary);
+      }
+      .btn-secondary:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: scale(1.05);
+      }
+      .btn-accent {
+        background-color: var(--color-accent);
+      }
+      .btn-accent:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: scale(1.05);
+      }
+
+      .form-input {
+        background-color: var(--color-surface-2);
+        border-color: var(--color-border);
+        color: var(--color-text-main);
+      }
+      .form-input:focus {
+        --tw-ring-color: var(--color-accent);
+        border-color: var(--color-accent);
+      }
+      .form-checkbox {
+        color: var(--color-accent);
+      }
+
+      .gradient-text {
+        background-image: linear-gradient(to right, var(--color-primary), var(--color-accent));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      /* Custom scrollbar for horizontal carousels */
+      .scrollbar-thin::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: var(--color-accent);
+        border-radius: 10px;
+        border: 3px solid var(--color-background);
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background-color: var(--color-primary);
+      }
+      
+      /* Custom Range Slider */
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--color-accent);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid var(--color-background);
+        margin-top: -8px; /* Center thumb on track */
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: var(--color-accent);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid var(--color-background);
+      }
+
+      input[type="range"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      input[type="range"]:disabled::-webkit-slider-thumb {
+        background: var(--color-text-muted);
+      }
+      input[type="range"]:disabled::-moz-range-thumb {
+        background: var(--color-text-muted);
+      }
+      
+      /* Syntax Highlighting */
+      .token-comment { color: #9EADC3; font-style: italic; } /* Muted blue-grey */
+      .token-string { color: #A5D6A7; } /* Light green */
+      .token-keyword { color: #F06292; font-weight: bold; } /* Pink */
+      .token-number { color: #81D4FA; } /* Light blue */
+      .token-function { color: #FFD54F; } /* Amber */
+      .token-operator { color: #C5A6FF; } /* Lavender */
+      .token-placeholder { 
+        background-color: rgba(224, 195, 252, 0.1); 
+        border-left: 3px solid var(--color-accent);
+        display: block;
+      }
+
+      /* Custom scrollbar for code blocks */
+      .custom-scrollbar::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: var(--color-accent);
+        border-radius: 4px;
+        border: 2px solid var(--color-surface-2);
+      }
+    </style>
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
+    "html-to-image": "https://aistudiocdn.com/html-to-image@^1.11.13",
+    "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.4",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/yu-gi-code-v2/assets/index-Cwn-HrGW.js"></script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
