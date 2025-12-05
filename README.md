@@ -3,6 +3,7 @@
 
 ### 🚀 **[Play with yu-gi-code-v2 Live Here](https://fatiguita.github.io/yu-gi-code-v2/)**
 
+### made with help of Gemini 2.5 / 3.0
 **Turn your code into a duel!**
 
 Yu-Gi-Code! is an interactive application that transforms programming libraries and abstract concepts into **Yu-Gi-Oh! style trading cards**. Powered by the **Google Gemini API**, it generates unique lore, stats, and artwork for every function, making learning new libraries a magical experience.
