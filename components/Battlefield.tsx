@@ -125,6 +125,19 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
   const [revealedCards, setRevealedCards] = useState<Set<string>>(new Set());
   const [isDuelAnswerCorrect, setIsDuelAnswerCorrect] = useState<boolean | null>(null);
 
+  // Ref for the hand container to control scrolling
+  const handContainerRef = useRef<HTMLDivElement>(null);
+
+  // Helper to scroll the hand container
+  const scrollHand = (direction: 'left' | 'right') => {
+    if (handContainerRef.current) {
+        const scrollAmount = 200; // Approximate width of a card + gap
+        handContainerRef.current.scrollBy({
+            left: direction === 'left' ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+        });
+    }
+  };
 
   const timerIntervalRef = useRef<number | null>(null);
 
@@ -690,9 +703,9 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
         const isImplementationChallenge = 'targetFunction' in duelChallenge;
 
         return (
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col min-h-full">
                 {/* Top Section: Challenge */}
-                <div className="flex-grow p-4 bg-black bg-opacity-30 rounded-lg border border-muted mb-4 overflow-auto">
+                <div className="flex-grow min-h-[200px] p-4 bg-black bg-opacity-30 rounded-lg border border-muted mb-4 overflow-auto">
                     <h4 className="text-lg font-bold text-accent mb-2">
                         {isImplementationChallenge ? 'Trial of Implementation:' : 'Riddle of Syntax:'}
                     </h4>
@@ -725,16 +738,38 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
                 </div>
 
                 {/* Bottom Section: Hand */}
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 relative group">
                     <h4 className="text-center font-bold mb-2">Your Hand ({hand.length}/7)</h4>
-                    <div className="flex flex-nowrap justify-start items-center gap-2 sm:gap-4 bg-black bg-opacity-20 p-2 sm:p-4 rounded-lg h-[230px] sm:h-[280px] overflow-x-auto">
+                    
+                    {/* Left Scroll Button */}
+                    <button 
+                        onClick={() => scrollHand('left')}
+                        className="absolute left-0 top-[60%] -translate-y-1/2 z-10 p-2 bg-black/60 hover:bg-black/90 text-white rounded-r-lg backdrop-blur-sm transition-all shadow-lg border-y border-r border-gray-600 active:scale-95"
+                        aria-label="Scroll Left"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+
+                    {/* Right Scroll Button */}
+                    <button 
+                        onClick={() => scrollHand('right')}
+                        className="absolute right-0 top-[60%] -translate-y-1/2 z-10 p-2 bg-black/60 hover:bg-black/90 text-white rounded-l-lg backdrop-blur-sm transition-all shadow-lg border-y border-l border-gray-600 active:scale-95"
+                        aria-label="Scroll Right"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+
+                    <div 
+                        ref={handContainerRef}
+                        className="flex flex-nowrap justify-start items-center gap-2 sm:gap-4 bg-black bg-opacity-20 p-2 sm:p-4 rounded-lg h-[230px] sm:h-[280px] overflow-x-auto scroll-smooth scrollbar-thin"
+                    >
                         {hand.length > 0 ? hand.map(c => (
                              <div 
                                 key={c.name}
-                                className={`flex-shrink-0 w-[160px] h-[250px] relative group ${!answeringCard ? 'cursor-pointer' : 'opacity-70'}`}
+                                className={`flex-shrink-0 w-[160px] h-[250px] relative group/card ${!answeringCard ? 'cursor-pointer' : 'opacity-70'}`}
                                 onClick={() => handleSelectHandCard(c)}
                             >
-                                <div className={`absolute top-0 left-0 origin-top-left transform scale-[0.5] transition-transform duration-300 ${revealedCards.has(c.name) ? 'group-hover:scale-[0.55] group-hover:-translate-y-3' : ''}`}>
+                                <div className={`absolute top-0 left-0 origin-top-left transform scale-[0.5] transition-transform duration-300 ${revealedCards.has(c.name) ? 'group-hover/card:scale-[0.55] group-hover/card:-translate-y-3' : ''}`}>
                                     <CoderCardComponent 
                                         card={enrichCardForDisplay(c)} 
                                         cardTheme={cardTheme}
@@ -745,7 +780,7 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
                                     />
                                 </div>
                             </div>
-                        )) : <p className="text-muted">No cards in hand.</p>}
+                        )) : <p className="text-muted w-full text-center">No cards in hand.</p>}
                     </div>
                 </div>
             </div>
@@ -848,27 +883,37 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     if (battleState !== 'duel_playing') return null;
     const isImplementation = duelChallenge && 'targetFunction' in duelChallenge;
     const currentPhase = isImplementation ? (answeringCard ? "Answering Phase" : "Challenge Phase") : "Syntax Phase";
+    
     return (
-        <div className="w-full md:w-1/3 flex-shrink-0 p-4 bg-surface-1 bg-opacity-50 rounded-lg border-b-2 md:border-b-0 md:border-r-2 border-muted flex flex-row md:flex-col justify-around items-center md:items-stretch gap-4">
-            <div className="text-center">
-                <h4 className="font-bold text-lg">{currentPhase}</h4>
-                <p className="text-4xl font-mono text-yellow-300">{formatTime(timer)}</p>
-            </div>
-            <div className="text-center">
-                <h4 className="font-bold text-lg">Strikes</h4>
-                <div className="flex justify-center gap-2 mt-1">
-                    {[...Array(3)].map((_, i) => (
-                        <span key={i} className={`w-8 h-2 rounded-full ${i < strikes ? 'bg-danger' : 'bg-gray-600'}`}></span>
-                    ))}
+        <div className="sticky top-0 z-20 lg:static w-full lg:w-80 flex-shrink-0 p-2 sm:p-4 bg-surface-1/95 lg:bg-surface-1/50 backdrop-blur-md rounded-lg border-b-2 lg:border-b-0 lg:border-r-2 border-muted flex flex-row lg:flex-col justify-between lg:justify-start items-center gap-2 sm:gap-4 shadow-md lg:shadow-none transition-all duration-300">
+            
+            {/* Stats Block */}
+            <div className="flex flex-row lg:flex-col gap-3 sm:gap-6 items-center lg:items-center flex-grow justify-around lg:justify-start">
+                <div className="text-center">
+                    <h4 className="font-bold text-xs sm:text-sm lg:text-lg text-muted lg:text-main">{currentPhase}</h4>
+                    <p className="text-xl sm:text-2xl lg:text-4xl font-mono text-yellow-300 leading-none mt-1">{formatTime(timer)}</p>
+                </div>
+                
+                {/* Strikes */}
+                <div className="text-center flex flex-col items-center">
+                     <h4 className="font-bold text-xs sm:text-sm lg:text-lg text-muted lg:text-main hidden sm:block">Strikes</h4>
+                     <div className="flex justify-center gap-1 lg:gap-2 mt-1">
+                        {[...Array(3)].map((_, i) => (
+                            <span key={i} className={`w-3 h-3 sm:w-4 sm:h-4 lg:w-8 lg:h-2 rounded-full ${i < strikes ? 'bg-danger' : 'bg-surface-2 border border-muted'}`}></span>
+                        ))}
+                    </div>
+                </div>
+
+                 <div className="text-center">
+                    <h4 className="font-bold text-xs sm:text-sm lg:text-lg text-muted lg:text-main">Deck</h4>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold leading-none mt-1">{deck.length}</p>
                 </div>
             </div>
-             <div className="text-center">
-                <h4 className="font-bold text-lg">Deck</h4>
-                <p className="text-2xl font-bold">{deck.length} Cards</p>
-            </div>
-            <div className="flex flex-col gap-3 mt-auto w-full md:max-w-none max-w-[150px]">
-                <button onClick={handleDrawCard} disabled={deck.length === 0 || hand.length >= 7 || !!answeringCard} className="w-full btn btn-primary text-sm py-2">Draw Card</button>
-                <button onClick={handleSkipChallenge} disabled={strikes >= 3 || !!answeringCard} className="w-full btn btn-secondary text-sm py-2">Skip</button>
+
+            {/* Buttons Block - Horizontal on Mobile/Tablet, Vertical on Desktop */}
+            <div className="flex flex-row lg:flex-col gap-2 lg:gap-3 lg:mt-auto w-auto lg:w-full flex-shrink-0">
+                <button onClick={handleDrawCard} disabled={deck.length === 0 || hand.length >= 7 || !!answeringCard} className="btn btn-primary text-xs sm:text-sm py-1.5 px-3 sm:px-4 lg:py-2">Draw</button>
+                <button onClick={handleSkipChallenge} disabled={strikes >= 3 || !!answeringCard} className="btn btn-secondary text-xs sm:text-sm py-1.5 px-3 sm:px-4 lg:py-2">Skip</button>
             </div>
         </div>
     )
@@ -883,7 +928,7 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
       <CardPreviewModal />
       {isExerciseReviewOpen && <ExerciseReviewModal />}
       <div 
-        className="bg-surface-1 w-full h-screen p-6 sm:p-8 text-center relative flex flex-col"
+        className="bg-surface-1 w-full h-screen p-4 md:p-6 lg:p-8 text-center relative flex flex-col"
         style={{ backgroundImage: 'radial-gradient(circle, var(--color-primary-transparent) 0%, transparent 60%)' }}
       >
         <button
@@ -893,19 +938,23 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        <h2 className="text-3xl font-bold mb-4 gradient-text flex-shrink-0">
+        <h2 className="text-2xl lg:text-3xl font-bold mb-4 gradient-text flex-shrink-0">
           Battlefield
         </h2>
         
-        <div className="flex w-full flex-col md:flex-row items-stretch gap-6 flex-grow min-h-0">
+        {/* Main layout container with scrolling logic. 
+            Mobile: overflow-y-auto (entire container scrolls, including top bar stickiness).
+            Desktop (lg): overflow-hidden (sidebar static, content scrolls).
+        */}
+        <div className="flex w-full flex-col lg:flex-row items-stretch gap-6 flex-grow min-h-0 overflow-y-auto lg:overflow-hidden">
             {battleState.startsWith('duel') && (
                 <>
                     {renderDuelStatus()}
-                    <div className="flex-grow min-h-0 min-w-0 overflow-y-auto pr-2 pb-4">{renderContent()}</div>
+                    <div className="flex-grow min-h-0 min-w-0 lg:overflow-y-auto pr-2 pb-4">{renderContent()}</div>
                 </>
             )}
             {!battleState.startsWith('duel') && (
-                 <div className="w-full flex-grow min-h-0 overflow-y-auto pr-2 pb-4">{renderContent()}</div>
+                 <div className="w-full flex-grow min-h-0 lg:overflow-y-auto pr-2 pb-4">{renderContent()}</div>
             )}
         </div>
       </div>
