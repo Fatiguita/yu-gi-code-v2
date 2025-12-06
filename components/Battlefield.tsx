@@ -25,7 +25,7 @@ const DIFFICULTY_SETTINGS: Record<Difficulty, { time: number; name: string }> = 
     easy: { time: 90, name: "Easy (1:30)" },
     medium: { time: 60, name: "Medium (1:00)" },
     hard: { time: 30, name: "Hard (0:30)" },
-    custom: { time: 0, name: "Custom Time" }, // Placeholder, time will come from state
+    custom: { time: 0, name: "Custom Time" },
     none: { time: Infinity, name: "No Timer" },
 };
 
@@ -95,6 +95,9 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
   const [userAnswer, setUserAnswer] = useState<string | number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Preview Modal State
+  const [previewCard, setPreviewCard] = useState<CoderCard | null>(null);
 
   // New state for the review modal
   const [isExerciseReviewOpen, setIsExerciseReviewOpen] = useState(false);
@@ -283,6 +286,10 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
         startNewDuelTurn(allDuelCards);
     }
   };
+
+  const handleViewCardDetails = useCallback((card: CoderCard) => {
+    setPreviewCard(card);
+  }, []);
   
   const handleSelectHandCard = (selectedCard: CoderCard) => {
     if (!duelChallenge || answeringCard) return;
@@ -440,6 +447,33 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
   };
   
+  const CardPreviewModal = () => {
+    if (!previewCard) return null;
+    return (
+        <div 
+            className="fixed inset-0 bg-black bg-opacity-90 z-[60] flex flex-col items-center justify-center p-4"
+            onClick={() => setPreviewCard(null)}
+        >
+            <div className="relative" onClick={e => e.stopPropagation()}>
+                <button
+                    onClick={() => setPreviewCard(null)}
+                    className="absolute -top-12 right-0 sm:-right-12 text-white hover:text-accent bg-surface-1 rounded-full p-2 border border-muted"
+                >
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                {/* Render the card large */}
+                <CoderCardComponent 
+                    card={enrichCardForDisplay(previewCard)}
+                    cardTheme={cardTheme}
+                    isInteractive={false} 
+                    libraryName={libraryName}
+                />
+            </div>
+            <p className="mt-4 text-muted text-sm">Tap anywhere outside to close</p>
+        </div>
+    );
+  };
+
   const ExerciseReviewModal = () => {
     let content;
     if (battleState === 'result') {
@@ -704,9 +738,10 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
                                     <CoderCardComponent 
                                         card={enrichCardForDisplay(c)} 
                                         cardTheme={cardTheme}
-                                        isInteractive={false}
+                                        isInteractive={!answeringCard}
                                         isRevealed={revealedCards.has(c.name)}
                                         libraryName={libraryName}
+                                        onViewDetails={handleViewCardDetails}
                                     />
                                 </div>
                             </div>
@@ -845,6 +880,7 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
         aria-modal="true"
         role="dialog"
     >
+      <CardPreviewModal />
       {isExerciseReviewOpen && <ExerciseReviewModal />}
       <div 
         className="bg-surface-1 w-full h-screen p-6 sm:p-8 text-center relative flex flex-col"
