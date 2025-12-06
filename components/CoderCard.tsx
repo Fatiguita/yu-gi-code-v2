@@ -16,6 +16,7 @@ interface CoderCardProps {
   isRevealed?: boolean;
   onDeleteCache?: (card: CoderCard) => void;
   onRetryImage?: (card: CoderCard) => void;
+  onViewDetails?: (card: CoderCard) => void; // New Prop
   libraryName?: string;
 }
 
@@ -59,7 +60,17 @@ const attributeIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> }
 };
 
 
-const CoderCardComponent = React.forwardRef<HTMLDivElement, CoderCardProps>(({ card, cardTheme = 'default', onCardClick, isInteractive = true, isRevealed = true, onDeleteCache, onRetryImage, libraryName }, ref) => {
+const CoderCardComponent = React.forwardRef<HTMLDivElement, CoderCardProps>(({ 
+    card, 
+    cardTheme = 'default', 
+    onCardClick, 
+    isInteractive = true, 
+    isRevealed = true, 
+    onDeleteCache, 
+    onRetryImage,
+    onViewDetails, 
+    libraryName 
+}, ref) => {
   const styles = cardTheme === 'official' 
     ? (officialCardStyles[card.cardCategory] || officialCardStyles.default)
     : officialCardStyles.default;
@@ -90,6 +101,14 @@ const CoderCardComponent = React.forwardRef<HTMLDivElement, CoderCardProps>(({ c
     e.stopPropagation();
     if (onRetryImage) {
       onRetryImage(card);
+    }
+    setIsMenuOpen(false);
+  };
+
+  const handleViewDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onViewDetails) {
+        onViewDetails(card);
     }
     setIsMenuOpen(false);
   };
@@ -147,11 +166,11 @@ const CoderCardComponent = React.forwardRef<HTMLDivElement, CoderCardProps>(({ c
       aria-label={isInteractive ? `Select card ${card.name}` : undefined}
     >
       {/* Options Menu Button */}
-      {(onDeleteCache || onRetryImage) && isInteractive && (
-        <div className="absolute top-1 right-1 z-10" onClick={e => e.stopPropagation()}>
+      {(onDeleteCache || onRetryImage || onViewDetails) && isInteractive && (
+        <div className="absolute top-1 right-1 z-20" onClick={e => e.stopPropagation()}>
           <button
             onClick={handleMenuToggle}
-            className="p-1 rounded-full bg-black bg-opacity-40 text-white hover:bg-opacity-70 transition-opacity"
+            className="p-1 rounded-full bg-black bg-opacity-60 text-white hover:bg-opacity-90 transition-all border border-gray-600 shadow-md"
             aria-label="Card options"
             title="Card Options"
           >
@@ -160,7 +179,20 @@ const CoderCardComponent = React.forwardRef<HTMLDivElement, CoderCardProps>(({ c
           
           {/* Options Menu Panel */}
           {isMenuOpen && (
-            <div className="absolute top-full right-0 mt-1 bg-surface-1 border border-border rounded-md shadow-lg py-1 w-52 z-20">
+            <div className="absolute top-full right-0 mt-1 bg-surface-1 border border-border rounded-md shadow-xl py-1 w-52 z-30">
+              
+               {onViewDetails && (
+                <button
+                    onClick={handleViewDetailsClick}
+                    className="w-full text-left px-3 py-2 text-sm text-main hover:bg-primary font-bold flex items-center gap-2 border-b border-gray-700"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                    View Full Size
+                </button>
+              )}
+
               {onDeleteCache && (
                 <button
                   onClick={handleDeleteClick}
