@@ -928,7 +928,8 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
       <CardPreviewModal />
       {isExerciseReviewOpen && <ExerciseReviewModal />}
       <div 
-        className="bg-surface-1 w-full h-screen p-4 md:p-6 lg:p-8 text-center relative flex flex-col"
+        // CHANGED: h-screen -> h-[100dvh] to fix mobile cutoff
+        className="bg-surface-1 w-full h-[100dvh] p-4 md:p-6 lg:p-8 text-center relative flex flex-col"
         style={{ backgroundImage: 'radial-gradient(circle, var(--color-primary-transparent) 0%, transparent 60%)' }}
       >
         <button
