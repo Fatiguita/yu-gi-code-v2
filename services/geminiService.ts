@@ -9,6 +9,87 @@ const getAiClient = (apiKey: string) => {
     return new GoogleGenAI({ apiKey: apiKey });
 };
 
+// --- New Smart Interpreter Logic ---
+
+export interface TopicAnalysisResult {
+    isValid: boolean;
+    refinedName: string;
+    refinedLanguage: string;
+    reason?: string;
+}
+
+/**
+ * Creates a "Mock" Error Card to display when a topic is invalid for Code Mode.
+ * This integrates seamlessly into the deck view as a "Trap" or "Glitch" card.
+ */
+export const createErrorCard = (userInput: string, reason: string): CoderCard => {
+    return {
+        name: "Syntax Error: Invalid Topic",
+        attribute: "UTILITY", // Represents a system utility message
+        level: 1,
+        type: "[System Interrupt]",
+        cardCategory: "Trap Card",
+        region: "The Void of Null References",
+        clan: "Gatekeepers of Scope",
+        description: {
+            effect: `Negates the generation of cards for '${userInput}'. The topic appears to be subjective or non-technical.`,
+            parameters: `Input: "${userInput}"`,
+            returns: "Recommendation: Switch to Creative Mode."
+        },
+        impact: 0,
+        easeOfUse: 0,
+        imagePrompt: "A glitchy, chaotic computer screen displaying a 404 error code in a dark fantasy magical style, neon cracks, digital distortion",
+        category: "Niche",
+        isImageLoading: true
+    };
+};
+
+/**
+ * Smartly interprets the user's input before generation.
+ * 1. Checks if it's a valid coding topic.
+ * 2. Cleans up the name (e.g., "react js" -> "React").
+ * 3. Rejects strictly non-coding topics.
+ */
+export const analyzeCodeTopic = async (library: string, language: string, apiKey: string): Promise<TopicAnalysisResult> => {
+    const ai = getAiClient(apiKey);
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `You are a strict technical validator for a code documentation tool. 
+            User Input: Library="${library}", Language="${language}".
+            
+            Task:
+            1. Determine if this input refers to a valid programming library, framework, language feature, or standard API (e.g., "React", "STL", "DOM", "Pandas" are VALID. "My Life", "Pizza", "How to be happy" are INVALID).
+            2. If VALID: Correct the capitalization and spelling (e.g., "reactjs" -> "React", "python" -> "Python").
+            3. If INVALID: Provide a short reason.
+
+            Return JSON only.`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        isValid: { type: Type.BOOLEAN },
+                        refinedName: { type: Type.STRING },
+                        refinedLanguage: { type: Type.STRING },
+                        reason: { type: Type.STRING }
+                    },
+                    required: ["isValid", "refinedName", "refinedLanguage"]
+                }
+            }
+        });
+
+        if (!response.text) throw new Error("Empty analysis response");
+        return JSON.parse(response.text.trim()) as TopicAnalysisResult;
+    } catch (error) {
+        console.warn("Topic analysis failed, defaulting to permissive mode.", error);
+        // Fallback: If AI fails, assume valid to avoid blocking the user unnecessarily
+        return { isValid: true, refinedName: library, refinedLanguage: language };
+    }
+};
+
+// --- End New Smart Interpreter Logic ---
+
 const descriptionSchema = {
     type: Type.OBJECT,
     description: "The card's text. IMPORTANT: The combined total length of the 'effect', 'parameters', and 'returns' fields must be 530 characters or less, including spaces. Be extremely concise.",
@@ -535,6 +616,7 @@ Based on this function card for \`${card.name}\`, create a puzzle.
       throw new Error("Failed to create an exercise for this card.");
     }
 };
+
 export const generateDuelDeck = async (baseCard: CoderCard, libraryName: string, language: string, apiKey: string): Promise<CoderCard[]> => {
     const ai = getAiClient(apiKey);
     try {
