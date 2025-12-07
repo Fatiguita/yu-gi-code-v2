@@ -48,20 +48,20 @@ const orichalcosShunoros1: Theme = {
     name: 'Orichalcos Shunoros',
     colors: {
       '--color-background': '#152324',
-      '--color-background-accent': '#3E8F89',
-      '--color-primary': '#58B4A9',
-      '--color-secondary': '#3E8F89',
-      '--color-accent': '#C9F2EE',
-      '--color-text-main': '#C9F2EE',
-      '--color-text-muted': '#6B83C3',
-      '--color-border': '#58B4A9',
+      '--color-background-accent': '#1F3435', // Slightly lighter than bg
+      '--color-primary': '#2C7A70', // Darkened from #58B4A9 to support light text
+      '--color-secondary': '#1E5F5B', // Darkened from #3E8F89
+      '--color-accent': '#58B4A9', // Used the old primary as accent (bright enough against dark bg)
+      '--color-text-main': '#C9F2EE', // Kept light cyan
+      '--color-text-muted': '#8FA6C0', // Lightened from #6B83C3 for better readability on dark
+      '--color-border': '#4A8F85',
       '--color-surface-1': '#1F3435',
-      '--color-surface-2': '#2A4647',
+      '--color-surface-2': '#233D3E', // Darkened from #2A4647 to ensure text pops
       '--color-success': '#80BFB4',
-      '--color-danger': '#BB4F4F',
-      '--color-warning': '#D6CA7E',
-      '--color-primary-transparent': 'rgba(88, 180, 169, 0.4)',
-      '--color-danger-surface': 'rgba(187, 79, 79, 0.2)',
+      '--color-danger': '#D65D5D', // Brightened for visibility
+      '--color-warning': '#E6D995',
+      '--color-primary-transparent': 'rgba(44, 122, 112, 0.4)',
+      '--color-danger-surface': 'rgba(214, 93, 93, 0.2)',
       '--color-success-surface': 'rgba(128, 191, 180, 0.2)',
     }
 };
@@ -69,21 +69,21 @@ const orichalcosShunoros1: Theme = {
 const xyzDragonCannon1: Theme = {
     name: 'XYZ-Dragon Cannon',
     colors: {
-      '--color-background': '#3C3F5E',
-      '--color-background-accent': '#6E5992',
-      '--color-primary': '#48A7A9',
-      '--color-secondary': '#3C878A',
-      '--color-accent': '#D6CA7E',
+      '--color-background': '#2E3147', // Darkened from #3C3F5E
+      '--color-background-accent': '#554275', // Darkened from #6E5992
+      '--color-primary': '#2A7A7C', // Darkened from #48A7A9 to support white text
+      '--color-secondary': '#255D60', // Darkened from #3C878A
+      '--color-accent': '#F2E699', // Brightened Gold for better contrast on dark
       '--color-text-main': '#FFFFFF',
-      '--color-text-muted': '#B0B2B1',
+      '--color-text-muted': '#C0C2C1', // Lightened gray
       '--color-border': '#D6CA7E',
-      '--color-surface-1': '#435579',
-      '--color-surface-2': '#5675AE',
+      '--color-surface-1': '#364461', // Darkened
+      '--color-surface-2': '#3D5A85', // Darkened from #5675AE to ensure input text is readable
       '--color-success': '#87CEEB',
-      '--color-danger': '#B44D50',
-      '--color-warning': '#D6CA7E',
-      '--color-primary-transparent': 'rgba(72, 167, 169, 0.4)',
-      '--color-danger-surface': 'rgba(180, 77, 80, 0.2)',
+      '--color-danger': '#E06063',
+      '--color-warning': '#F2E699',
+      '--color-primary-transparent': 'rgba(42, 122, 124, 0.4)',
+      '--color-danger-surface': 'rgba(224, 96, 99, 0.2)',
       '--color-success-surface': 'rgba(135, 206, 235, 0.2)',
     }
 };
@@ -91,22 +91,22 @@ const xyzDragonCannon1: Theme = {
 const princessChris2: Theme = {
     name: 'Princess Chris',
     colors: {
-      '--color-background': '#FDF0E1',
-      '--color-background-accent': '#FEA39E',
-      '--color-primary': '#F494B0',
-      '--color-secondary': '#FEA39E',
-      '--color-accent': '#FFD7B3',
-      '--color-text-main': '#5C3317',
-      '--color-text-muted': '#7D5259',
-      '--color-border': '#F6BC94',
+      '--color-background': '#FDF0E1', // Very light peach
+      '--color-background-accent': '#FFD1CD', // Darker peach for contrast
+      '--color-primary': '#F494B0', // Pink (supports dark text)
+      '--color-secondary': '#F08C85', // Darkened Salmon
+      '--color-accent': '#D65D7A', // Changed from Pale Peach (#FFD7B3) to Dark Rose. Crucial for light mode visibility.
+      '--color-text-main': '#4A2810', // Darkened brown for sharper contrast
+      '--color-text-muted': '#8A4E57', // Darker reddish-brown
+      '--color-border': '#E0A694',
       '--color-surface-1': '#FFF6EC',
-      '--color-surface-2': '#FFEFE6',
-      '--color-success': '#67B7B8',
-      '--color-danger': '#A56975',
-      '--color-warning': '#FBCC88',
+      '--color-surface-2': '#FAE5D6', // Slightly darker to differentiate inputs
+      '--color-success': '#4E9CA0', // Darker teal for light bg
+      '--color-danger': '#B85C68', // Darker red for light bg
+      '--color-warning': '#D98E28', // Darker orange/gold
       '--color-primary-transparent': 'rgba(244, 148, 176, 0.4)',
-      '--color-danger-surface': 'rgba(165, 105, 117, 0.2)',
-      '--color-success-surface': 'rgba(103, 183, 184, 0.2)',
+      '--color-danger-surface': 'rgba(184, 92, 104, 0.2)',
+      '--color-success-surface': 'rgba(78, 156, 160, 0.2)',
     }
 };
 
