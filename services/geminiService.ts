@@ -545,12 +545,69 @@ Concepts to categorize: ${concepts.join(', ')}`,
     }
 };
 
-export const generateUseCaseQuiz = async (card: CoderCard, apiKey: string): Promise<QuizQuestion> => {
+/**
+ * Generates a multiple-choice quiz based on the card's function.
+ * Now enhanced with Skill Level scaling to provide trivial vs. complex/trick scenarios.
+ */
+export const generateUseCaseQuiz = async (
+    card: CoderCard, 
+    skillLevel: SkillLevel, 
+    language: string, 
+    apiKey: string
+): Promise<QuizQuestion> => {
   const ai = getAiClient(apiKey);
+  
+  let promptContext = "";
+  
+  if (skillLevel === 'beginner') {
+      promptContext = `
+      Target Audience: Beginner ${language} Developer.
+      Goal: Test basic understanding of what the function does in ${language}.
+      Instructions:
+      - Create a straightforward scenario where using \`${card.name}\` is the clear textbook solution.
+      - The Correct Option should be simple and direct.
+      - The 3 Incorrect Options should be obviously wrong (e.g., unrelated tasks, nonsense logic).
+      `;
+  } else if (skillLevel === 'intermediate') {
+      promptContext = `
+      Target Audience: Senior ${language} Developer.
+      Goal: Test contextual decision making.
+      Instructions:
+      - Create a realistic ${language} development scenario (e.g., "You are building a specific module...").
+      - Ask why \`${card.name}\` is the *best* choice compared to similar ${language} alternatives.
+      - The Correct Option should highlight a specific advantage (performance, readability, or architectural fit).
+      - The 3 Incorrect Options should be plausible but slightly suboptimal or valid for different use cases.
+      `;
+  } else { // Advanced
+      promptContext = `
+      Target Audience: ${language} Systems Architect or Principal Engineer.
+      Goal: Test deep knowledge, edge cases, anti-patterns, or specific ${language} runtime constraints.
+      Instructions:
+      - Create a TRICKY or COMPLEX scenario. Frame it creatively (e.g., "A critical production bug", "A high-frequency trading algorithm", "A race condition in the Magic Spells database").
+      - The question should not just be "When to use X", but rather "In this specific constrained environment, what is the behavior of X?" or "Why would using X be a Mistake here?" or "What is the obscure side-effect of X?".
+      - The Correct Option must be technically precise regarding the ${language} ecosystem and maybe counter-intuitive.
+      - The 3 Incorrect Options must be "Traps"—common misconceptions that look correct to a junior dev but are wrong in this specific edge case.
+      - BE CREATIVE. Do not repeat generic examples.
+      `;
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Based on this function card: ${JSON.stringify(card.name)} with description "${card.description.effect}", create a multiple-choice question to test a developer's understanding of when to use it. Provide one clear question, four options (one correct, three plausible but incorrect), the zero-based index of the correct answer, and a brief explanation for why the correct answer is right.`,
+      contents: `
+      Context: The user is holding the card "${card.name}" from a library written in ${language}.
+      Card Description: "${card.description.effect}".
+      Card Stats: Impact ${card.impact}, Ease of Use ${card.easeOfUse}.
+      
+      ${promptContext}
+
+      Task: Create a multiple-choice "Trial of Strategy" quiz question.
+      Return strictly a JSON object with:
+      - question (string): The scenario or problem.
+      - options (array of 4 strings): The possible answers.
+      - correctAnswerIndex (integer): 0-3.
+      - explanation (string): A brief, helpful explanation of why the answer is correct and why the others failed.
+      `,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
