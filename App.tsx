@@ -11,7 +11,9 @@ import {
     generateImage, 
     getConceptsForTheme,
     categorizeConcepts,
-    generateSelectedCreativeCards
+    generateSelectedCreativeCards,
+    analyzeCodeTopic,
+    createErrorCard
 } from './services/geminiService';
 import { clearImageCache, deleteImageFromCache } from './services/imageCache';
 import { themes, defaultTheme } from './styles/themes';
@@ -306,23 +308,56 @@ const App: React.FC = () => {
     setAllFunctions([]);
     setFunctionCategories({});
     setSelectedFunctions(new Set());
-    setSearchedLibrary(query);
-    if (language) {
-        setSearchedLanguage(language);
-    } else {
-        setSearchedLanguage('');
+    
+    // Default setting for later use
+    let refinedLibrary = query;
+    let refinedLanguage = language || '';
+
+    // Smart Topic Analysis (Logic Injection)
+    if (appMode === 'code') {
+      try {
+        const analysis = await analyzeCodeTopic(query, language || '', apiKey);
+        
+        if (!analysis.isValid) {
+          // It's invalid! Generate the Mock Trap Card.
+          const errorCard = createErrorCard(query, analysis.reason || "Invalid code topic");
+          
+          setPresentationCards([errorCard]);
+          // We trigger image generation for the error card too, so it looks cool
+          startImageGeneration([errorCard]);
+          
+          setIsLoading(false);
+          return; // Stop execution here
+        }
+
+        // It's valid, use the cleaned names
+        refinedLibrary = analysis.refinedName;
+        refinedLanguage = analysis.refinedLanguage;
+        
+        // Update input fields to reflect cleaned names (optional UI polish)
+        setLibraryInput(refinedLibrary);
+        if (refinedLanguage) setLanguageInput(refinedLanguage);
+
+      } catch (err) {
+        // If analysis fails, we just proceed as normal (fallback)
+        console.warn("Topic analysis skipped due to error", err);
+      }
     }
+
+    setSearchedLibrary(refinedLibrary);
+    setSearchedLanguage(refinedLanguage);
     
     try {
-      if (appMode === 'code' && language) {
-        const functions = await getLibraryFunctions(query, language, apiKey);
+      if (appMode === 'code') {
+        // Use refined inputs
+        const functions = await getLibraryFunctions(refinedLibrary, refinedLanguage, apiKey);
         setAllFunctions(functions);
 
-        const categories = await categorizeFunctions(query, language, functions, apiKey);
+        const categories = await categorizeFunctions(refinedLibrary, refinedLanguage, functions, apiKey);
         setFunctionCategories(categories as Record<string, string>);
 
         if (numPresentationCards > 0) {
-          const generatedCards = await generatePresentationCards(query, language, numPresentationCards, apiKey);
+          const generatedCards = await generatePresentationCards(refinedLibrary, refinedLanguage, numPresentationCards, apiKey);
           setPresentationCards(generatedCards.map(c => ({...c, isImageLoading: !isManualArtMode})));
           startImageGeneration(generatedCards);
         } else {
@@ -1014,7 +1049,7 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
             )}
         </div>
 
-        {(isLoading) && <Loader message={isLoading ? (appMode === 'code' ? 'Fetching library data...' : 'Exploring creative theme...') : undefined} />}
+        {(isLoading) && <Loader message={isLoading ? (appMode === 'code' ? 'Analyzing Tome...' : 'Exploring creative theme...') : undefined} />}
         
         {error && (
           <div className="text-center bg-danger border border-red-500 p-4 rounded-lg max-w-md mx-auto my-4">
