@@ -187,14 +187,15 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     setBattleState('loading');
     setError(null);
     try {
-      const data = await generateUseCaseQuiz(card, apiKey);
+      // Passes 'language' from component props to the service
+      const data = await generateUseCaseQuiz(card, skillLevel, language, apiKey);
       setQuizData(data);
       setBattleState('quiz');
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create a quiz for this card.");
       setBattleState('idle');
     }
-  }, [card, apiKey]);
+  }, [card, skillLevel, language, apiKey]); // Added skillLevel to dependencies
 
   const fetchSyntaxExercise = useCallback(async () => {
     setBattleState('loading');
