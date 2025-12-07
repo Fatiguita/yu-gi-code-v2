@@ -62,7 +62,11 @@ const QueueIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 
 const App: React.FC = () => {
-  const [apiKey, setApiKey] = useState<string>('');
+  // 1. API Key: Lazy load
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return localStorage.getItem('gemini-api-key') || '';
+  });
+
   const [appMode, setAppMode] = useState<'code' | 'creative'>('code');
   const [presentationCards, setPresentationCards] = useState<CoderCard[]>([]);
   const [cards, setCards] = useState<CoderCard[]>([]);
@@ -80,10 +84,26 @@ const App: React.FC = () => {
   const [isBattlefieldVisible, setIsBattlefieldVisible] = useState(false);
   const [deckDownloadStatus, setDeckDownloadStatus] = useState({ isLoading: false, progress: 0, total: 0 });
   const [clearCacheText, setClearCacheText] = useState('Clear Image Cache');
-  const [currentTheme, setCurrentTheme] = useState<Theme>(defaultTheme);
-  const [cardTheme, setCardTheme] = useState<'default' | 'official'>('default');
-  const [skillLevel, setSkillLevel] = useState<SkillLevel>('advanced');
-  const [isManualArtMode, setIsManualArtMode] = useState(false);
+
+  // 2. Settings: Lazy load with defaults for persistence
+  const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
+    const savedName = localStorage.getItem('ygc_app_theme');
+    return themes.find(t => t.name === savedName) || defaultTheme;
+  });
+
+  const [cardTheme, setCardTheme] = useState<'default' | 'official'>(() => {
+    return (localStorage.getItem('ygc_card_theme') as 'default' | 'official') || 'default';
+  });
+
+  const [skillLevel, setSkillLevel] = useState<SkillLevel>(() => {
+    return (localStorage.getItem('ygc_skill_level') as SkillLevel) || 'advanced';
+  });
+
+  const [isManualArtMode, setIsManualArtMode] = useState(() => {
+    return localStorage.getItem('ygc_manual_art') === 'true';
+  });
+
+  // Other UI states
   const [manualImageMap, setManualImageMap] = useState<Map<string, string>>(new Map());
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [deckToPrint, setDeckToPrint] = useState<CoderCard[]>([]);
@@ -171,19 +191,32 @@ const App: React.FC = () => {
   }, [startImageGeneration]);
 
 
+  // --- Persistence Effects ---
+
+  // Save UI Theme and apply CSS variables
   useEffect(() => {
+    localStorage.setItem('ygc_app_theme', currentTheme.name);
     Object.entries(currentTheme.colors).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
   }, [currentTheme]);
-  
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem('gemini-api-key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-    }
-  }, []);
 
+  // Save Card Theme
+  useEffect(() => {
+    localStorage.setItem('ygc_card_theme', cardTheme);
+  }, [cardTheme]);
+
+  // Save Skill Level
+  useEffect(() => {
+    localStorage.setItem('ygc_skill_level', skillLevel);
+  }, [skillLevel]);
+
+  // Save Manual Art Mode
+  useEffect(() => {
+    localStorage.setItem('ygc_manual_art', String(isManualArtMode));
+  }, [isManualArtMode]);
+  
+  // Save API Key
   useEffect(() => {
     if (apiKey) {
       localStorage.setItem('gemini-api-key', apiKey);
@@ -193,6 +226,7 @@ const App: React.FC = () => {
   }, [apiKey]);
 
 
+  // Load Saved Sessions
   useEffect(() => {
     try {
         const storedSessions = localStorage.getItem('yu-gi-code-sessions');
@@ -673,9 +707,11 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
 
       setSearchedLibrary(state.searchedLibrary || '');
       setSearchedLanguage(state.searchedLanguage || '');
-      setCardTheme(state.cardTheme || 'default');
-      setSkillLevel(state.skillLevel || 'advanced');
-      setIsManualArtMode(state.isManualArtMode || false);
+      // If session had a theme/skill level, load it into state (which will then persist to local storage via useEffect)
+      if (state.cardTheme) setCardTheme(state.cardTheme);
+      if (state.skillLevel) setSkillLevel(state.skillLevel);
+      if (state.isManualArtMode !== undefined) setIsManualArtMode(state.isManualArtMode);
+
       const safeManualImageMap: [string, string][] = (Array.isArray(state.manualImageMap) ? state.manualImageMap : []).filter(
           (entry): entry is [string, string] =>
               Array.isArray(entry) &&
