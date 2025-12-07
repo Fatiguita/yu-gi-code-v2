@@ -613,7 +613,8 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
             
             <div className="mt-6 pt-6 border-t border-muted flex-grow flex flex-col min-h-0">
               <h4 className="text-lg font-bold text-accent mb-4">Bruno</h4>
-              <div className="bg-surface-2 p-3 rounded-lg flex-grow flex flex-col min-h-0">
+              {/* FIXED: Added min-h-[250px] so chat doesn't collapse on mobile */}
+              <div className="bg-surface-2 p-3 rounded-lg flex-grow flex flex-col min-h-[250px]">
                 {/* Message history */}
                 <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-2 pr-2 space-y-3">
                   {chatHistory.length === 0 && !isChatbotLoading && (
@@ -806,7 +807,8 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
               
               <div className="mt-6 pt-6 border-t border-muted flex-grow flex flex-col min-h-0">
                 <h4 className="text-lg font-bold text-accent mb-4">Bruno</h4>
-                <div className="bg-surface-2 p-3 rounded-lg flex-grow flex flex-col min-h-0">
+                {/* FIXED: Added min-h-[250px] here too */}
+                <div className="bg-surface-2 p-3 rounded-lg flex-grow flex flex-col min-h-[250px]">
                   {/* Message history */}
                   <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-2 pr-2 space-y-3">
                     {chatHistory.length === 0 && !isChatbotLoading && (
@@ -878,7 +880,6 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
         );
     }
   };
-
   const renderDuelStatus = () => {
     if (battleState !== 'duel_playing') return null;
     const isImplementation = duelChallenge && 'targetFunction' in duelChallenge;
