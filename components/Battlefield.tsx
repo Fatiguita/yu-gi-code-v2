@@ -379,8 +379,29 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
   const handleSyntaxSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!syntaxData) return;
-    const isAnswerCorrect = typeof userAnswer === 'string' && 
-                            userAnswer.trim().toLowerCase() === syntaxData.blankAnswer.trim().toLowerCase();
+
+    const userAns = typeof userAnswer === 'string' ? userAnswer.trim() : '';
+    const correctAns = syntaxData.blankAnswer.trim();
+    let isAnswerCorrect = false;
+
+    // Check if the AI's answer allows for a wildcard string
+    if (correctAns.includes('__ANY_STRING__')) {
+        // 1. Escape special regex characters in the correct answer (like parenthesis, dots)
+        // We do this so valid code syntax doesn't break the regex
+        let regexPattern = correctAns.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        // 2. Replace our specific keyword with a non-greedy wildcard regex
+        // This means it will match anything inside the quotes
+        regexPattern = regexPattern.replace('__ANY_STRING__', '.*?');
+        
+        // 3. Test the user's answer against this pattern
+        const regex = new RegExp(`^${regexPattern}$`, 'i'); // Case insensitive
+        isAnswerCorrect = regex.test(userAns);
+    } else {
+        // Standard strict check for non-string arguments
+        isAnswerCorrect = userAns.toLowerCase() === correctAns.toLowerCase();
+    }
+
     setIsCorrect(isAnswerCorrect);
     setChatHistory([]);
     setBattleState('result');
