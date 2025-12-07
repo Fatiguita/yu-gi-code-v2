@@ -508,9 +508,12 @@ Based on this function card for \`${card.name}\`, create a puzzle.
     -   For example, 'result = strcmp(str1, str2);' should become '______ = ___(____, ____);'. 'memcpy(dest, src, n);' should become '___(____, ____, ____);'.
 3.  The 'snippet' you provide in the JSON should contain this obfuscated line.
 4.  The 'blankAnswer' in the JSON must be the exact code that replaces the '___(____, ...)' part, including the function name and arguments. For example, if the line is 'strcpy(dest, "hello");', the blankAnswer should be 'strcpy(dest, "hello")'.
-5.  Write a playful 'explanation' that reveals the answer and explains the code, as if you're a trickster revealing a secret.
-6.  The code must NOT contain comments with hints or instructions like "// Fill this in".
-7.  The snippet must be formatted with newlines (\\n) for readability.`,
+5.  IMPORTANT: If a function argument is a generic string literal (like a log message, a label, or a name) where the user's specific text choice shouldn't matter, use the keyword "__ANY_STRING__" inside the quotes for the 'blankAnswer'. 
+    - Example: Instead of expecting 'console.log("Hello World")', use 'console.log("__ANY_STRING__")'.
+    - Do NOT use this for specific keys, IDs, or syntax-critical strings that MUST be exact.
+6.  Write a playful 'explanation' that reveals the answer and explains the code, as if you're a trickster revealing a secret.
+7.  The code must NOT contain comments with hints or instructions like "// Fill this in".
+8.  The snippet must be formatted with newlines (\\n) for readability.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -532,7 +535,6 @@ Based on this function card for \`${card.name}\`, create a puzzle.
       throw new Error("Failed to create an exercise for this card.");
     }
 };
-
 export const generateDuelDeck = async (baseCard: CoderCard, libraryName: string, language: string, apiKey: string): Promise<CoderCard[]> => {
     const ai = getAiClient(apiKey);
     try {
