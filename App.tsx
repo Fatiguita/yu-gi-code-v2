@@ -103,13 +103,21 @@ const App: React.FC = () => {
     return localStorage.getItem('ygc_manual_art') === 'true';
   });
 
+  // Session Persistence Setting
+  const [isSessionPersistenceEnabled, setIsSessionPersistenceEnabled] = useState(() => {
+      return localStorage.getItem('ygc_session_persistence') === 'true';
+  });
+
   // Other UI states
   const [manualImageMap, setManualImageMap] = useState<Map<string, string>>(new Map());
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [deckToPrint, setDeckToPrint] = useState<CoderCard[]>([]);
   const [deckNameToPrint, setDeckNameToPrint] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Sessions
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
+  
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [numPresentationCards, setNumPresentationCards] = useState<number>(6);
@@ -193,7 +201,7 @@ const App: React.FC = () => {
 
   // --- Persistence Effects ---
 
-  // Save UI Theme and apply CSS variables
+  // Save UI Theme
   useEffect(() => {
     localStorage.setItem('ygc_app_theme', currentTheme.name);
     Object.entries(currentTheme.colors).forEach(([key, value]) => {
@@ -224,20 +232,44 @@ const App: React.FC = () => {
       localStorage.removeItem('gemini-api-key');
     }
   }, [apiKey]);
+  
+  // Save/Update Session Persistence Preference
+  const toggleSessionPersistence = (enabled: boolean) => {
+      setIsSessionPersistenceEnabled(enabled);
+      localStorage.setItem('ygc_session_persistence', String(enabled));
+      if (enabled) {
+          // If turning on, immediately save current sessions to ensure they exist in storage
+           localStorage.setItem('yu-gi-code-sessions', JSON.stringify(savedSessions));
+      }
+      // If turning off, we just stop updating, we don't necessarily wipe data (safer)
+  };
 
-
-  // Load Saved Sessions
+  // Load Sessions (Conditional on Persistence Setting)
   useEffect(() => {
-    try {
-        const storedSessions = localStorage.getItem('yu-gi-code-sessions');
-        if (storedSessions) {
-            setSavedSessions(JSON.parse(storedSessions));
+      if (isSessionPersistenceEnabled) {
+        try {
+            const storedSessions = localStorage.getItem('yu-gi-code-sessions');
+            if (storedSessions) {
+                setSavedSessions(JSON.parse(storedSessions));
+            }
+        } catch (error) {
+            console.error("Failed to load sessions from localStorage", error);
         }
-    } catch (error) {
-        console.error("Failed to load sessions from localStorage", error);
-        setSavedSessions([]);
-    }
-  }, []);
+      }
+  }, []); // Run once on mount
+
+  // Save Sessions (Conditional on Persistence Setting)
+  useEffect(() => {
+      if (isSessionPersistenceEnabled) {
+          try {
+             localStorage.setItem('yu-gi-code-sessions', JSON.stringify(savedSessions));
+          } catch (e) {
+              console.error("Failed to save sessions to storage (likely quota exceeded):", e);
+              setError("Storage Quota Exceeded. Some sessions may not persist. Try exporting to ZIP.");
+          }
+      }
+  }, [savedSessions, isSessionPersistenceEnabled]);
+
 
   // New robust queue processing effect
   useEffect(() => {
@@ -405,7 +437,6 @@ const App: React.FC = () => {
         setFunctionCategories(categories as Record<string, string>);
       }
     } catch (err) {
-      // FIX: Explicitly type `message` as a string to address a potential type inference issue with the 'unknown' type from the catch block.
       const message: string = err instanceof Error ? err.message : String(err);
       if (message.includes("API Key")) {
         setError("Your API Key is invalid or expired. Please check it in the settings.");
@@ -499,7 +530,6 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
             }
         }
     } catch (err) {
-      // FIX: Explicitly type `message` as a string for consistency.
       const message: string = err instanceof Error ? err.message : String(err);
       if (message.includes("API Key")) {
           setError("Your API Key is invalid or expired. Please check it in the settings.");
@@ -649,7 +679,7 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
 
     const updatedSessions = [...savedSessions, newSession];
     setSavedSessions(updatedSessions);
-    localStorage.setItem('yu-gi-code-sessions', JSON.stringify(updatedSessions));
+    // Note: LocalStorage save handled by useEffect if enabled
     setIsSaveDialogOpen(false);
   };
 
@@ -733,7 +763,7 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
     if (sessionToDelete === null) return;
     const updatedSessions = savedSessions.filter(s => s.id !== sessionToDelete);
     setSavedSessions(updatedSessions);
-    localStorage.setItem('yu-gi-code-sessions', JSON.stringify(updatedSessions));
+    // Note: LocalStorage sync handled by useEffect if enabled
     setSessionToDelete(null);
   };
 
@@ -756,7 +786,7 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
 
       const updatedSessions = [...savedSessions, ...newSessions];
       setSavedSessions(updatedSessions);
-      localStorage.setItem('yu-gi-code-sessions', JSON.stringify(updatedSessions));
+      // Note: LocalStorage sync handled by useEffect if enabled
       alert(`${newSessions.length} session(s) imported successfully!`);
       setIsGalleryOpen(false);
   };
@@ -863,6 +893,29 @@ const handleGenerateSelected = useCallback(async (options: { batchSize: number; 
                         onSkillLevelChange={setSkillLevel}
                     />
                     <ManualArtToggle isManual={isManualArtMode} onToggle={setIsManualArtMode} />
+                    
+                    {/* Session Persistence Toggle */}
+                    <div className="w-full flex flex-col items-center gap-2 p-3 bg-surface-2 rounded-lg border border-muted">
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="session-persist-toggle" className="text-xs font-bold text-muted">Auto-Save Sessions (Browser Storage)</label>
+                            <button
+                                id="session-persist-toggle"
+                                onClick={() => toggleSessionPersistence(!isSessionPersistenceEnabled)}
+                                className={`relative inline-flex items-center h-5 rounded-full w-10 transition-colors duration-300 ${
+                                    isSessionPersistenceEnabled ? 'bg-success' : 'bg-gray-600'
+                                }`}
+                            >
+                                <span className={`inline-block w-3 h-3 transform bg-white rounded-full transition-transform duration-300 ${
+                                    isSessionPersistenceEnabled ? 'translate-x-6' : 'translate-x-1'
+                                }`} />
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-yellow-500 text-center">
+                            Warning: Enabling this may slow down app startup if decks contain many high-res images. 
+                            Use "Export" for better performance with large collections.
+                        </p>
+                    </div>
+
                     <button
                         onClick={handleClearCache}
                         className="bg-surface-2 hover:bg-danger text-main text-sm font-bold py-2 px-4 rounded-full transition-colors duration-300"
