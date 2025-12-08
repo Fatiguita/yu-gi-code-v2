@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { CoderCard, QuizQuestion, SyntaxExercise, ImplementationChallenge, SkillLevel, ChatMessage } from '../types';
+import { CoderCard, QuizQuestion, SyntaxExercise, ImplementationChallenge, SkillLevel, ChatMessage, QuizMode } from '../types';
 import { generateUseCaseQuiz, generateSyntaxExercise, generateDuelDeck, generateImplementationChallenge, generateImage, getChatbotResponse } from '../services/geminiService';
 import Loader from './Loader';
 import CoderCardComponent from './CoderCard';
@@ -617,6 +617,95 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     );
   }
 
+  const QUIZ_SEED_SEQUENCE: QuizMode[] = [
+    'card_not_answer', 
+    'trivial', 'trivial', 'trivial', 
+    'card_not_answer', 
+    'card_answer', 
+    'trivial', 
+    'card_answer', 'card_answer', 
+    'trivial', 
+    'card_not_answer', 
+    'trivial', 
+    'card_answer', 
+    'trivial', 'trivial', 
+    'card_not_answer', 
+    'card_answer', 
+    'trivial', 
+    'card_not_answer', 
+    'card_answer'
+];
+
+const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, skillLevel, isManualArtMode, manualImageMap, libraryName, language, appMode, apiKey }) => {
+  // ... existing states ...
+  const [battleState, setBattleState] = useState<BattleState>('idle');
+  // ...
+  
+  // NEW: State to track where we are in the sequence
+  // We initialize it randomly so not every session starts at index 0, but it follows the order after that.
+  const [quizSequenceIndex, setQuizSequenceIndex] = useState<number>(() => Math.floor(Math.random() * QUIZ_SEED_SEQUENCE.length));
+
+  // ... other existing states (previewCard, etc.) ...
+
+  const fetchUseCaseQuiz = useCallback(async () => {
+    setBattleState('loading');
+    setError(null);
+    
+    // 1. Get the mode for this turn
+    const currentMode = QUIZ_SEED_SEQUENCE[quizSequenceIndex % QUIZ_SEED_SEQUENCE.length];
+    
+    // 2. Advance the index for the NEXT turn immediately
+    setQuizSequenceIndex(prev => prev + 1);
+
+    try {
+      // 3. Pass the deterministic mode to the service
+      const data = await generateUseCaseQuiz(card, skillLevel, language, currentMode, apiKey);
+      setQuizData(data);
+      setBattleState('quiz');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create a quiz for this card.");
+      setBattleState('idle');
+    }
+  }, [card, skillLevel, language, apiKey, quizSequenceIndex]); // Added index to dependency
+
+  const handleRetryChallenge = () => {
+    const wasQuiz = !!quizData;
+    setUserAnswer(null);
+    setIsCorrect(null);
+
+    if (wasQuiz) {
+        // This will trigger the next item in the sequence
+        fetchUseCaseQuiz();
+    } else {
+        fetchSyntaxExercise();
+    }
+  };
+
+  const resetBattle = () => {
+    setBattleState('idle');
+    setQuizData(null);
+    setSyntaxData(null);
+    setUserAnswer(null);
+    setIsCorrect(null);
+    setError(null);
+    setHand([]);
+    setDeck([]);
+    setAllDuelCards([]);
+    setDuelChallenge(null);
+    setTargetCard(null);
+    setStrikes(0);
+    setAnsweringCard(null);
+    setDuelUserAnswer('');
+    setRevealedCards(new Set());
+    setIsCustomizingTime(false);
+    setIsDuelAnswerCorrect(null);
+    
+    // OPTIONAL: Do we reset the sequence index on close? 
+    // Currently: No, it persists for the session so the user doesn't get repetitive patterns if they reopen.
+    
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+  };
+  
   const renderContent = () => {
     switch (battleState) {
       case 'loading':
