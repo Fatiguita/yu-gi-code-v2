@@ -603,7 +603,7 @@ export const generateUseCaseQuiz = async (
       ${promptContext}
 
       Task: Create a multiple-choice "Trial of Strategy" quiz question.
-        think of the possible age of a human times 200 and divide by 3.
+        select a letter from the alphabet, count the amount of traces you need to write the letter and the number you get divide it by 2.
         if resulting number is not an integer, the exercise will look for user to identify the card utility.
         if resulting number has decimals, then the question will describe a case where card is not really useful or hand a trivial case.
       Return strictly a JSON object with:
