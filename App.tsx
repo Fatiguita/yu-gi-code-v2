@@ -120,7 +120,7 @@ const App: React.FC = () => {
   
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [numPresentationCards, setNumPresentationCards] = useState<number>(6);
+  const [numPresentationCards, setNumPresentationCards] = useState<number>(3);
   const [isQueueMenuOpen, setIsQueueMenuOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
   const queueMenuContainerRef = useRef<HTMLDivElement>(null);
