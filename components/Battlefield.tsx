@@ -634,9 +634,9 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     'trivial', 
     'card_not_answer', 
     'card_answer'
-];
+  ];
 
-const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, skillLevel, isManualArtMode, manualImageMap, libraryName, language, appMode, apiKey }) => {
+  const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, skillLevel, isManualArtMode, manualImageMap, libraryName, language, appMode, apiKey }) => {
   // ... existing states ...
   const [battleState, setBattleState] = useState<BattleState>('idle');
   // ...
@@ -700,8 +700,6 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     setIsCustomizingTime(false);
     setIsDuelAnswerCorrect(null);
     
-    // OPTIONAL: Do we reset the sequence index on close? 
-    // Currently: No, it persists for the session so the user doesn't get repetitive patterns if they reopen.
     
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
   };
