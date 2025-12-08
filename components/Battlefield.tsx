@@ -29,25 +29,7 @@ const DIFFICULTY_SETTINGS: Record<Difficulty, { time: number; name: string }> = 
     none: { time: Infinity, name: "No Timer" },
 };
 
-const QUIZ_SEED_SEQUENCE: QuizMode[] = [
-    'card_not_answer', 
-    'trivial', 'trivial', 'trivial', 
-    'card_not_answer', 
-    'card_answer', 
-    'trivial', 
-    'card_answer', 'card_answer', 
-    'trivial', 
-    'card_not_answer', 
-    'trivial', 
-    'card_answer', 
-    'trivial', 'trivial', 
-    'card_not_answer', 
-    'card_answer', 
-    'trivial', 
-    'card_not_answer', 
-    'card_answer'
-];
-
+// Helper: Fisher-Yates Shuffle
 const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -55,6 +37,26 @@ const shuffleArray = <T,>(array: T[]): T[] => {
       [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
     return newArray;
+};
+
+// SYSTEM: Dynamic Sequence Generator
+// Creates a random 20-step sequence with a fixed distribution of question types.
+const generateRandomQuizSequence = (): QuizMode[] => {
+    const distribution: Record<QuizMode, number> = {
+        'card_not_answer': 5, // 25% Anti-Patterns
+        'card_answer': 6,     // 30% Utility/Best Fit
+        'trivial': 9          // 45% General Knowledge
+    };
+    
+    let sequence: QuizMode[] = [];
+    
+    (Object.keys(distribution) as QuizMode[]).forEach(mode => {
+        for(let i = 0; i < distribution[mode]; i++) {
+            sequence.push(mode);
+        }
+    });
+    
+    return shuffleArray(sequence);
 };
 
 const normalizeCodeForComparison = (code: string) => {
@@ -105,7 +107,6 @@ const SimpleMarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
         processed = processed.replace(/`([^`]+)`/g, '<code class="bg-black bg-opacity-40 px-1.5 py-0.5 rounded text-accent font-mono text-xs">$1</code>');
 
         // 4. Lists
-        // Lines starting with "- " or "* " become list items.
         const lines = processed.split('\n');
         let inList = false;
         let resultLines: string[] = [];
@@ -136,10 +137,10 @@ const SimpleMarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
             return `<pre class="bg-black bg-opacity-50 p-3 rounded-lg my-3 text-xs font-mono overflow-x-auto whitespace-pre text-gray-200 border border-gray-700"><code>${escapeHtml(code)}</code></pre>`;
         });
 
-        // 6. Handle Newlines (convert to <br> if not inside ul/pre tags)
+        // 6. Handle Newlines
         processed = processed.replace(/\n/g, '<br />');
         
-        // Cleanup: Remove <br> immediately after/before block tags to avoid extra spacing
+        // Cleanup
         processed = processed.replace(/(<pre[^>]*>[\s\S]*?<\/pre>)<br \/>/g, '$1');
         processed = processed.replace(/<br \/>(<pre[^>]*>)/g, '$1');
         processed = processed.replace(/(<ul[^>]*>[\s\S]*?<\/ul>)<br \/>/g, '$1');
@@ -190,8 +191,12 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
   const [revealedCards, setRevealedCards] = useState<Set<string>>(new Set());
   const [isDuelAnswerCorrect, setIsDuelAnswerCorrect] = useState<boolean | null>(null);
 
-  // Quiz Sequence State
-  const [quizSequenceIndex, setQuizSequenceIndex] = useState<number>(() => Math.floor(Math.random() * QUIZ_SEED_SEQUENCE.length));
+  // Quiz Sequence State (Initialized on mount with a fresh shuffled sequence)
+  const [quizSequence, setQuizSequence] = useState<QuizMode[]>(() => generateRandomQuizSequence());
+  const [quizSequenceIndex, setQuizSequenceIndex] = useState<number>(0);
+  
+  // NEW: State for history tracking
+  const [questionHistory, setQuestionHistory] = useState<string[]>([]);
 
   // Ref for the hand container to control scrolling
   const handContainerRef = useRef<HTMLDivElement>(null);
@@ -255,22 +260,28 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     setBattleState('loading');
     setError(null);
     
-    // 1. Get the mode for this turn
-    const currentMode = QUIZ_SEED_SEQUENCE[quizSequenceIndex % QUIZ_SEED_SEQUENCE.length];
+    // 1. Get the mode for this turn from our shuffled sequence
+    const currentMode = quizSequence[quizSequenceIndex % quizSequence.length];
     
-    // 2. Advance the index for the NEXT turn immediately
+    // 2. Advance the index for the NEXT turn
     setQuizSequenceIndex(prev => prev + 1);
 
     try {
       // 3. Pass the deterministic mode to the service
-      const data = await generateUseCaseQuiz(card, skillLevel, language, currentMode, apiKey);
+      const data = await generateUseCaseQuiz(card, skillLevel, language, currentMode, questionHistory, apiKey);
       setQuizData(data);
+      
+      // NEW: Update history
+      if (!questionHistory.includes(data.question)) {
+          setQuestionHistory(prev => [...prev, data.question]);
+      }
+      
       setBattleState('quiz');
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create a quiz for this card.");
       setBattleState('idle');
     }
-  }, [card, skillLevel, language, apiKey, quizSequenceIndex]);
+  }, [card, skillLevel, language, apiKey, quizSequence, quizSequenceIndex, questionHistory]);
 
   const fetchSyntaxExercise = useCallback(async () => {
     setBattleState('loading');
@@ -554,6 +565,12 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     setRevealedCards(new Set());
     setIsCustomizingTime(false);
     setIsDuelAnswerCorrect(null);
+    
+    // Regenerate Sequence for a fresh experience
+    setQuizSequence(generateRandomQuizSequence());
+    setQuizSequenceIndex(0);
+    setQuestionHistory([]); // Clear history on full reset
+    
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
   };
   
