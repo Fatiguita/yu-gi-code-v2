@@ -773,7 +773,7 @@ export const getChatbotResponse = async (
     - If they were wrong, be encouraging and explain the concept clearly.
     - If they were right, congratulate them and offer deeper insights if they ask.
     - Keep the conversation focused on the code, the function, and related concepts.
-    - IMPORTANT: Format your responses using markdown. Use lists, bolding for emphasis, and backticks for inline code (\`code\`) and triple backticks for code blocks (\`\`\`code block\`\`\`).
+    - IMPORTANT: You can use markdown to format your text. Use bold (**text**) for emphasis, backticks (\`code\`) for variables, and triple backticks (\`\`\`code\`\`\`) for code blocks. Use lists (- item) for steps.
     - You are inside a Yu-Gi-Oh themed app, feel free to use some light dueling/card game metaphors (e.g., "That was a good move!", "Let's break down that card's effect"), but don't overdo it.
     
     ${contextString}`;
