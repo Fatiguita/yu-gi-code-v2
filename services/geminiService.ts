@@ -550,6 +550,7 @@ export const generateUseCaseQuiz = async (
     skillLevel: SkillLevel, 
     language: string, 
     mode: QuizMode,
+    previousQuestions: string[],
     apiKey: string
 ): Promise<QuizQuestion> => {
   const ai = getAiClient(apiKey);
@@ -586,7 +587,19 @@ export const generateUseCaseQuiz = async (
       `;
   }
 
-  // 2. Add Skill Level nuance
+  // 2. Add History Constraint
+  // This forces the AI to look at previous questions and generate something new.
+  const historyConstraint = previousQuestions.length > 0 
+    ? `
+    IMPORTANT - AVOID REPETITION:
+    The following questions have ALREADY been asked in this session. Do NOT generate a similar scenario or question:
+    ${previousQuestions.map(q => `- "${q}"`).join('\n')}
+    
+    Generate a DISTINCTLY DIFFERENT scenario or angle.
+    ` 
+    : "";
+
+  // 3. Add Skill Level nuance
   let skillInstruction = "";
   if (skillLevel === 'beginner') skillInstruction = "Keep terminology simple. Beginner level.";
   if (skillLevel === 'intermediate') skillInstruction = "Target Senior Dev. Realistic production scenarios.";
@@ -602,6 +615,7 @@ export const generateUseCaseQuiz = async (
       ${skillInstruction}
       
       ${promptContext}
+      ${historyConstraint}
 
       Task: Create a multiple-choice quiz question based STRICTLY on the MODE provided.
       Return strictly a JSON object with:
