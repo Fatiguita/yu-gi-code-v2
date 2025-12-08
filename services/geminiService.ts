@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { CoderCard, QuizQuestion, SyntaxExercise, ImplementationChallenge, SkillLevel, ChatMessage } from '../types';
+import { CoderCard, QuizQuestion, SyntaxExercise, ImplementationChallenge, SkillLevel, ChatMessage, QuizMode } from '../types';
 import { getImageFromCache, setImageInCache } from './imageCache';
 
 const getAiClient = (apiKey: string) => {
@@ -554,65 +554,66 @@ export const generateUseCaseQuiz = async (
     card: CoderCard, 
     skillLevel: SkillLevel, 
     language: string, 
+    mode: QuizMode, // <--- NEW PARAMETER
     apiKey: string
 ): Promise<QuizQuestion> => {
   const ai = getAiClient(apiKey);
   
-  // 1. Programmatic Randomization (The "Coin Flip")
-  // Instead of asking AI to count traces, we decide the mode here.
-  // true = Scenario where card is NOT useful or tricky (Anti-Pattern)
-  // false = Scenario where card is the Perfect Tool (Utility)
-  const isTrickQuestion = Math.random() > 0.5; 
-
-  let skillContext = "";
+  let promptContext = "";
   
-  // 2. Skill Level + Mode Context construction
-  if (skillLevel === 'beginner') {
-      skillContext = `Target: Beginner. Keep it simple.`;
-  } else if (skillLevel === 'intermediate') {
-      skillContext = `Target: Senior Dev. Focus on best practices.`;
+  // 1. Define instructions based on the Seed Mode
+  if (mode === 'card_answer') {
+      // The Card IS the answer (Utility / Best Fit)
+      promptContext = `
+      MODE: "Perfect Fit / Utility" (The card is the Correct Answer).
+      - Goal: Describe a specific problem where \`${card.name}\` is the absolute best solution.
+      - Question: "You need to [specific task]. Which function should you use?" OR "Why is \`${card.name}\` ideal for [specific scenario]?"
+      - Correct Answer: The option that describes \`${card.name}\` or the name \`${card.name}\` itself (depending on question phrasing).
+      - Incorrect Options: Plausible but inferior alternatives.
+      `;
+  } else if (mode === 'card_not_answer') {
+      // The Card is NOT the answer (Anti-Pattern / Trap)
+      promptContext = `
+      MODE: "Anti-Pattern / Trap" (The card is NOT the answer, or is the Wrong Choice).
+      - Goal: Describe a scenario where using \`${card.name}\` would be a MISTAKE, bug, or performance issue.
+      - Question: "Why should you AVOID using \`${card.name}\` in [specific context]?" OR "What is a major limitation of \`${card.name}\` here?"
+      - Correct Answer: The option explaining the limitation, side-effect, or error.
+      - Incorrect Options: Generic praise or false positive benefits.
+      `;
   } else {
-      skillContext = `Target: Architect. Focus on edge cases and performance.`;
+      // Trivial (Definition / Syntax / Basic)
+      promptContext = `
+      MODE: "Trivial / Foundation" (Basic Knowledge Check).
+      - Goal: Ask a straightforward definition or syntax question.
+      - Question: "What is the primary return type of \`${card.name}\`?" or "Which of these best describes \`${card.name}\`?"
+      - Keep it simple, factual, and direct. 
+      - (If Skill Level is Advanced, make it a "Trivial but obscure" fact about the card).
+      `;
   }
 
-  // 3. The Strategy Mode Instruction
-  const modeInstruction = isTrickQuestion 
-    ? `
-    MODE: "Anti-Pattern / Limitation" (TRICK QUESTION).
-    - Goal: Describe a scenario where a developer might WRONGLY try to use \`${card.name}\`, or a trivial case where it's overkill.
-    - Question: Ask "Why is \`${card.name}\` NOT the best choice here?" or "What is a major limitation of \`${card.name}\` in this specific context?"
-    - Correct Answer: Identify the specific bottleneck, side-effect, or logic error.
-    - Options: The wrong options should be generic praise of the function.
-    ` 
-    : `
-    MODE: "Perfect Fit / Utility" (STRATEGY QUESTION).
-    - Goal: Describe a specific, realistic programming problem that \`${card.name}\` solves uniquely well.
-    - Question: "You are facing [Problem Description]. Why is \`${card.name}\` your best move?"
-    - Correct Answer: Highlight the specific mechanic that solves the problem.
-    - Options: Plausible alternatives that fail in this specific edge case.
-    `;
+  // 2. Add Skill Level nuance
+  let skillInstruction = "";
+  if (skillLevel === 'beginner') skillInstruction = "Keep terminology simple. Beginner level.";
+  if (skillLevel === 'intermediate') skillInstruction = "Target Senior Dev. Realistic production scenarios.";
+  if (skillLevel === 'advanced') skillInstruction = "Target Architect. Edge cases, memory leaks, strict typing.";
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `
-      Context: The user is holding the card "${card.name}" (Library: ${language}).
+      Context: Card "${card.name}" (Library: ${language}).
       Card Effect: "${card.description.effect}".
       
-      ${skillContext}
-      ${modeInstruction}
+      ${skillInstruction}
+      
+      ${promptContext}
 
-      IMPORTANT: 
-      1. Do NOT just ask "What does this function do?". 
-      2. Frame the question as a battlefield decision or a code review scenario.
-      3. The "Explanation" must reveal why the strategy worked or failed.
-
-      Task: Create a multiple-choice "Trial of Strategy" quiz question.
+      Task: Create a multiple-choice quiz question based STRICTLY on the MODE provided.
       Return strictly a JSON object with:
-      - question (string): The scenario.
-      - options (array of 4 strings).
-      - correctAnswerIndex (integer): 0-3.
-      - explanation (string).
+      - question (string)
+      - options (array of 4 strings)
+      - correctAnswerIndex (integer): 0-3
+      - explanation (string): Explain why the answer matches the MODE (e.g. why it was a trap, or why it fits).
       `,
       config: {
         responseMimeType: "application/json",
