@@ -29,6 +29,25 @@ const DIFFICULTY_SETTINGS: Record<Difficulty, { time: number; name: string }> = 
     none: { time: Infinity, name: "No Timer" },
 };
 
+const QUIZ_SEED_SEQUENCE: QuizMode[] = [
+    'card_not_answer', 
+    'trivial', 'trivial', 'trivial', 
+    'card_not_answer', 
+    'card_answer', 
+    'trivial', 
+    'card_answer', 'card_answer', 
+    'trivial', 
+    'card_not_answer', 
+    'trivial', 
+    'card_answer', 
+    'trivial', 'trivial', 
+    'card_not_answer', 
+    'card_answer', 
+    'trivial', 
+    'card_not_answer', 
+    'card_answer'
+];
+
 const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -171,6 +190,9 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
   const [revealedCards, setRevealedCards] = useState<Set<string>>(new Set());
   const [isDuelAnswerCorrect, setIsDuelAnswerCorrect] = useState<boolean | null>(null);
 
+  // Quiz Sequence State
+  const [quizSequenceIndex, setQuizSequenceIndex] = useState<number>(() => Math.floor(Math.random() * QUIZ_SEED_SEQUENCE.length));
+
   // Ref for the hand container to control scrolling
   const handContainerRef = useRef<HTMLDivElement>(null);
 
@@ -232,16 +254,23 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
   const fetchUseCaseQuiz = useCallback(async () => {
     setBattleState('loading');
     setError(null);
+    
+    // 1. Get the mode for this turn
+    const currentMode = QUIZ_SEED_SEQUENCE[quizSequenceIndex % QUIZ_SEED_SEQUENCE.length];
+    
+    // 2. Advance the index for the NEXT turn immediately
+    setQuizSequenceIndex(prev => prev + 1);
+
     try {
-      // Passes 'language' from component props to the service
-      const data = await generateUseCaseQuiz(card, skillLevel, language, apiKey);
+      // 3. Pass the deterministic mode to the service
+      const data = await generateUseCaseQuiz(card, skillLevel, language, currentMode, apiKey);
       setQuizData(data);
       setBattleState('quiz');
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create a quiz for this card.");
       setBattleState('idle');
     }
-  }, [card, skillLevel, language, apiKey]); // Added skillLevel to dependencies
+  }, [card, skillLevel, language, apiKey, quizSequenceIndex]);
 
   const fetchSyntaxExercise = useCallback(async () => {
     setBattleState('loading');
@@ -617,93 +646,6 @@ const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, ski
     );
   }
 
-  const QUIZ_SEED_SEQUENCE: QuizMode[] = [
-    'card_not_answer', 
-    'trivial', 'trivial', 'trivial', 
-    'card_not_answer', 
-    'card_answer', 
-    'trivial', 
-    'card_answer', 'card_answer', 
-    'trivial', 
-    'card_not_answer', 
-    'trivial', 
-    'card_answer', 
-    'trivial', 'trivial', 
-    'card_not_answer', 
-    'card_answer', 
-    'trivial', 
-    'card_not_answer', 
-    'card_answer'
-  ];
-
-  const Battlefield: React.FC<BattlefieldProps> = ({ card, cardTheme, onClose, skillLevel, isManualArtMode, manualImageMap, libraryName, language, appMode, apiKey }) => {
-  // ... existing states ...
-  const [battleState, setBattleState] = useState<BattleState>('idle');
-  // ...
-  
-  // NEW: State to track where we are in the sequence
-  // We initialize it randomly so not every session starts at index 0, but it follows the order after that.
-  const [quizSequenceIndex, setQuizSequenceIndex] = useState<number>(() => Math.floor(Math.random() * QUIZ_SEED_SEQUENCE.length));
-
-  // ... other existing states (previewCard, etc.) ...
-
-  const fetchUseCaseQuiz = useCallback(async () => {
-    setBattleState('loading');
-    setError(null);
-    
-    // 1. Get the mode for this turn
-    const currentMode = QUIZ_SEED_SEQUENCE[quizSequenceIndex % QUIZ_SEED_SEQUENCE.length];
-    
-    // 2. Advance the index for the NEXT turn immediately
-    setQuizSequenceIndex(prev => prev + 1);
-
-    try {
-      // 3. Pass the deterministic mode to the service
-      const data = await generateUseCaseQuiz(card, skillLevel, language, currentMode, apiKey);
-      setQuizData(data);
-      setBattleState('quiz');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create a quiz for this card.");
-      setBattleState('idle');
-    }
-  }, [card, skillLevel, language, apiKey, quizSequenceIndex]); // Added index to dependency
-
-  const handleRetryChallenge = () => {
-    const wasQuiz = !!quizData;
-    setUserAnswer(null);
-    setIsCorrect(null);
-
-    if (wasQuiz) {
-        // This will trigger the next item in the sequence
-        fetchUseCaseQuiz();
-    } else {
-        fetchSyntaxExercise();
-    }
-  };
-
-  const resetBattle = () => {
-    setBattleState('idle');
-    setQuizData(null);
-    setSyntaxData(null);
-    setUserAnswer(null);
-    setIsCorrect(null);
-    setError(null);
-    setHand([]);
-    setDeck([]);
-    setAllDuelCards([]);
-    setDuelChallenge(null);
-    setTargetCard(null);
-    setStrikes(0);
-    setAnsweringCard(null);
-    setDuelUserAnswer('');
-    setRevealedCards(new Set());
-    setIsCustomizingTime(false);
-    setIsDuelAnswerCorrect(null);
-    
-    
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-  };
-  
   const renderContent = () => {
     switch (battleState) {
       case 'loading':
