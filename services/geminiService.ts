@@ -558,56 +558,61 @@ export const generateUseCaseQuiz = async (
 ): Promise<QuizQuestion> => {
   const ai = getAiClient(apiKey);
   
-  let promptContext = "";
+  // 1. Programmatic Randomization (The "Coin Flip")
+  // Instead of asking AI to count traces, we decide the mode here.
+  // true = Scenario where card is NOT useful or tricky (Anti-Pattern)
+  // false = Scenario where card is the Perfect Tool (Utility)
+  const isTrickQuestion = Math.random() > 0.5; 
+
+  let skillContext = "";
   
+  // 2. Skill Level + Mode Context construction
   if (skillLevel === 'beginner') {
-      promptContext = `
-      Target Audience: Beginner ${language} Developer.
-      Goal: Test basic understanding of what the function does in ${language}.
-      Instructions:
-      - Create a straightforward scenario where using \`${card.name}\` is the clear textbook solution.
-      - The Correct Option should be simple and direct.
-      - The 3 Incorrect Options should be obviously wrong (e.g., unrelated tasks, nonsense logic).
-      `;
+      skillContext = `Target: Beginner. Keep it simple.`;
   } else if (skillLevel === 'intermediate') {
-      promptContext = `
-      Target Audience: Senior ${language} Developer.
-      Goal: Test contextual decision making.
-      Instructions:
-      - Create a realistic ${language} development scenario (e.g., "You are building a specific module...").
-      - Ask why \`${card.name}\` is the *best* choice compared to similar ${language} alternatives.
-      - The Correct Option should highlight a specific advantage (performance, readability, or architectural fit).
-      - The 3 Incorrect Options should be plausible but slightly suboptimal or valid for different use cases.
-      `;
-  } else { // Advanced
-      promptContext = `
-      Target Audience: ${language} Systems Architect or Principal Engineer.
-      Goal: Test deep knowledge, edge cases, anti-patterns, or specific ${language} runtime constraints.
-      Instructions:
-      - Create a TRICKY or COMPLEX scenario. Frame it creatively (e.g., "A critical production bug", "A high-frequency trading algorithm", "A race condition in the Magic Spells database").
-      - The question should not just be "When to use X", but rather "In this specific constrained environment, what is the behavior of X?" or "Why would using X be a Mistake here?" or "What is the obscure side-effect of X?".
-      - The Correct Option must be technically precise regarding the ${language} ecosystem and maybe counter-intuitive.
-      - The 3 Incorrect Options must be "Traps"—common misconceptions that look correct to a junior dev but are wrong in this specific edge case.
-      - BE CREATIVE. Do not repeat generic examples.
-      `;
+      skillContext = `Target: Senior Dev. Focus on best practices.`;
+  } else {
+      skillContext = `Target: Architect. Focus on edge cases and performance.`;
   }
+
+  // 3. The Strategy Mode Instruction
+  const modeInstruction = isTrickQuestion 
+    ? `
+    MODE: "Anti-Pattern / Limitation" (TRICK QUESTION).
+    - Goal: Describe a scenario where a developer might WRONGLY try to use \`${card.name}\`, or a trivial case where it's overkill.
+    - Question: Ask "Why is \`${card.name}\` NOT the best choice here?" or "What is a major limitation of \`${card.name}\` in this specific context?"
+    - Correct Answer: Identify the specific bottleneck, side-effect, or logic error.
+    - Options: The wrong options should be generic praise of the function.
+    ` 
+    : `
+    MODE: "Perfect Fit / Utility" (STRATEGY QUESTION).
+    - Goal: Describe a specific, realistic programming problem that \`${card.name}\` solves uniquely well.
+    - Question: "You are facing [Problem Description]. Why is \`${card.name}\` your best move?"
+    - Correct Answer: Highlight the specific mechanic that solves the problem.
+    - Options: Plausible alternatives that fail in this specific edge case.
+    `;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `
-      Context: The user is holding the card "${card.name}" from a library written in ${language}.
-      Card Description: "${card.description.effect}".
-      Card Stats: Impact ${card.impact}, Ease of Use ${card.easeOfUse}.
+      Context: The user is holding the card "${card.name}" (Library: ${language}).
+      Card Effect: "${card.description.effect}".
       
-      ${promptContext}
+      ${skillContext}
+      ${modeInstruction}
+
+      IMPORTANT: 
+      1. Do NOT just ask "What does this function do?". 
+      2. Frame the question as a battlefield decision or a code review scenario.
+      3. The "Explanation" must reveal why the strategy worked or failed.
 
       Task: Create a multiple-choice "Trial of Strategy" quiz question.
       Return strictly a JSON object with:
-      - question (string): The scenario or problem.
-      - options (array of 4 strings): The possible answers.
+      - question (string): The scenario.
+      - options (array of 4 strings).
       - correctAnswerIndex (integer): 0-3.
-      - explanation (string): A brief, helpful explanation of why the answer is correct and why the others failed.
+      - explanation (string).
       `,
       config: {
         responseMimeType: "application/json",
