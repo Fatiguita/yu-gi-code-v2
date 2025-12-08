@@ -62,6 +62,7 @@ export const analyzeCodeTopic = async (library: string, language: string, apiKey
             1. Determine if this input refers to a valid programming library, framework, language feature, or standard API (e.g., "React", "STL", "DOM", "Pandas" are VALID. "My Life", "Pizza", "How to be happy" are INVALID).
             2. If VALID: Correct the capitalization and spelling (e.g., "reactjs" -> "React", "python" -> "Python").
             3. If INVALID: Provide a short reason.
+            4. If the content requested is not specific but still valid programming related approve.
 
             Return JSON only.`,
             config: {
