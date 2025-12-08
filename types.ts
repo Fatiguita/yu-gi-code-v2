@@ -51,6 +51,8 @@ export interface Theme {
 
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
+export type QuizMode = 'card_answer' | 'card_not_answer' | 'trivial';
+
 export interface SavedSessionState {
   appMode: 'code' | 'creative';
   presentationCards: CoderCard[];
