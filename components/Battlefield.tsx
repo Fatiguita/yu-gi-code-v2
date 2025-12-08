@@ -49,42 +49,88 @@ const formatTime = (seconds: number) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+// Improved Markdown Renderer
 const SimpleMarkdownRenderer: React.FC<{ text: string }> = ({ text }) => {
-    const toHtml = (md: string) => {
-        let html = md;
-        // Handle code blocks first to prevent inner markdown from being parsed
-        html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
-            const escapedCode = code
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-            return `<pre class="bg-black bg-opacity-40 p-2 rounded my-2 text-sm font-mono overflow-x-auto"><code>${escapedCode}</code></pre>`;
-        });
-
-        // Handle lists, merging consecutive list items
-        html = html.replace(/^\s*[-*]\s(.*)$/gm, '<ul><li>$1</li></ul>');
-        html = html.replace(/<\/ul>\s*\r?\n<ul>/g, '');
-
-        // Handle inline elements
-        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        html = html.replace(/`([^`]+)`/g, '<code class="bg-black bg-opacity-40 px-1 py-0.5 rounded text-accent font-mono">$1</code>');
-        
-        // Handle newlines -> <br> for lines not inside a block element
-        const parts = html.split(/(<pre[\s\S]*?<\/pre>|<ul>[\s\S]*?<\/ul>)/);
-        html = parts.map((part, index) => {
-            if (index % 2 === 0) { // Not a pre or ul block
-                return part.trim().replace(/\r?\n/g, '<br />');
-            }
-            return part;
-        }).join('');
-
-        return html;
+    const escapeHtml = (str: string) => {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     };
 
-    return <div className="text-sm text-left whitespace-normal" dangerouslySetInnerHTML={{ __html: toHtml(text) }} />;
+    const renderText = (input: string) => {
+        if (!input) return '';
+
+        let processed = input.replace(/\r\n/g, '\n');
+
+        // 1. Extract Code Blocks to prevent formatting inside them
+        const codeBlocks: string[] = [];
+        processed = processed.replace(/```([\s\S]*?)```/g, (_, code) => {
+            codeBlocks.push(code);
+            return `__CODEBLOCK__${codeBlocks.length - 1}__`;
+        });
+
+        // 2. Escape HTML in the rest of the text
+        processed = escapeHtml(processed);
+
+        // 3. Process Formatting
+        // Bold (**text**)
+        processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Italic (*text*) - requires space/boundary before to avoid matching math (2 * 3)
+        processed = processed.replace(/(\s|^)\*([^*]+)\*(\s|$|[.,!?])/g, '$1<em>$2</em>$3');
+        
+        // Inline Code (`text`)
+        processed = processed.replace(/`([^`]+)`/g, '<code class="bg-black bg-opacity-40 px-1.5 py-0.5 rounded text-accent font-mono text-xs">$1</code>');
+
+        // 4. Lists
+        // Lines starting with "- " or "* " become list items.
+        const lines = processed.split('\n');
+        let inList = false;
+        let resultLines: string[] = [];
+
+        lines.forEach(line => {
+            const listMatch = line.match(/^\s*[-*]\s+(.*)$/);
+            if (listMatch) {
+                if (!inList) {
+                    resultLines.push('<ul class="list-disc list-inside my-2 space-y-1 pl-1">');
+                    inList = true;
+                }
+                resultLines.push(`<li>${listMatch[1]}</li>`);
+            } else {
+                if (inList) {
+                    resultLines.push('</ul>');
+                    inList = false;
+                }
+                resultLines.push(line);
+            }
+        });
+        if (inList) resultLines.push('</ul>');
+        
+        processed = resultLines.join('\n');
+
+        // 5. Restore Code Blocks (formatted)
+        processed = processed.replace(/__CODEBLOCK__(\d+)__/g, (_, index) => {
+            const code = codeBlocks[parseInt(index)];
+            return `<pre class="bg-black bg-opacity-50 p-3 rounded-lg my-3 text-xs font-mono overflow-x-auto whitespace-pre text-gray-200 border border-gray-700"><code>${escapeHtml(code)}</code></pre>`;
+        });
+
+        // 6. Handle Newlines (convert to <br> if not inside ul/pre tags)
+        processed = processed.replace(/\n/g, '<br />');
+        
+        // Cleanup: Remove <br> immediately after/before block tags to avoid extra spacing
+        processed = processed.replace(/(<pre[^>]*>[\s\S]*?<\/pre>)<br \/>/g, '$1');
+        processed = processed.replace(/<br \/>(<pre[^>]*>)/g, '$1');
+        processed = processed.replace(/(<ul[^>]*>[\s\S]*?<\/ul>)<br \/>/g, '$1');
+        processed = processed.replace(/<br \/>(<ul[^>]*>)/g, '$1');
+        processed = processed.replace(/<\/li><br \/>/g, '</li>');
+
+        return processed;
+    };
+
+    return <div className="text-sm text-left leading-relaxed whitespace-normal break-words" dangerouslySetInnerHTML={{ __html: renderText(text) }} />;
 };
 
 
